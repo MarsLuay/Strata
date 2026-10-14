@@ -31,6 +31,11 @@ inline double stage_objective(const std::vector<double>& stage_ms, bool prompt_p
     return stage_objective(stage_ms.data(), stage_ms.size(), prompt_pipeline);
 }
 
+/// Keep an interactive prompt candidate only when its predicted serial decode cost does not regress.
+inline bool decode_guard(double candidate_ms, double reference_ms, double epsilon_ms = 1e-6) {
+    return candidate_ms <= reference_ms + epsilon_ms;
+}
+
 /// The restriction only makes sense when the model has the layers for it.
 inline bool restriction_possible(int64_t n_layers, int stages) {
     return stages >= 2 && n_layers >= kMinStageLayers * stages;

@@ -178,10 +178,11 @@ The card that drives the monitors needs more headroom than one that drives none;
 `--vram-reserve-mib 300 --vram-reserve-later-mib 1800` gives the first card's cache that VRAM.
 
 **auto** tries every placement (all of them for two, three or, since 0.1.40, four cards; proportional to the free VRAM beyond that)
-and scores each placement's stage work, including the expected cost of missed profile pairs. The default `prompt` objective
-uses the slowest stage because long prompt chunks are pipelined; `--layer-split-objective decode` instead adds all stage
-work for the legacy serial decode-window ranking. Ties go to the placement that leaves the fullest card the most room.
-The startup log prints the choice:
+and scores each placement's stage work, including the expected cost of missed profile pairs. The default `interactive`
+objective first finds the serial-decode choice, then chooses the fastest prompt pipeline among placements whose predicted
+decode cost does not regress. `--layer-split-objective prompt` removes that decode guard for prompt throughput priority;
+`decode` selects by the serial stage sum. Ties go to the placement that leaves the fullest card the most room. The startup
+log prints the choice:
 
 ```
 strata generate: layer split auto: K=19 - the caches hold 11767 of 12288 profiled pairs (fullest device 100%)

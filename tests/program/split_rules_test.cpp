@@ -30,6 +30,9 @@ int main() {
     CHECK(stage_objective({18.0, 10.0}, true) == 18.0);
     CHECK(stage_objective({14.0, 14.0}, true) == 14.0);
     CHECK(stage_objective({}, true) == 0.0);
+    CHECK(decode_guard(28.0, 28.0));
+    CHECK(decode_guard(28.0 + 5e-7, 28.0));
+    CHECK(!decode_guard(28.0 + 2e-6, 28.0));
     // the restriction needs the layers for it
     CHECK(restriction_possible(48, 4));
     CHECK(restriction_possible(12, 4));
