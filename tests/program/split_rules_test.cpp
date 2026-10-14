@@ -24,6 +24,12 @@ int main() {
     CHECK(has_tiny_stage({2}, 48));
     CHECK(!has_tiny_stage({3}, 48));
     CHECK(smallest_stage({}, 48) == 48);
+
+    // Long prompts flow through the stages, so their score is the bottleneck rather than the serial decode sum.
+    CHECK(stage_objective({18.0, 10.0}, false) == 28.0);
+    CHECK(stage_objective({18.0, 10.0}, true) == 18.0);
+    CHECK(stage_objective({14.0, 14.0}, true) == 14.0);
+    CHECK(stage_objective({}, true) == 0.0);
     // the restriction needs the layers for it
     CHECK(restriction_possible(48, 4));
     CHECK(restriction_possible(12, 4));

@@ -177,9 +177,11 @@ request; with less spare page cache it would be disk traffic. Not measured: both
 The card that drives the monitors needs more headroom than one that drives none; with the display on the last card,
 `--vram-reserve-mib 300 --vram-reserve-later-mib 1800` gives the first card's cache that VRAM.
 
-**auto** tries every placement (all of them for two, three or, since 0.1.40, four cards; proportional to the free VRAM beyond that) and
-keeps the one whose caches would hold the most of the expert profile, hottest pairs weighted most; ties go to the
-placement that leaves the fullest card the most room. The startup log prints the choice:
+**auto** tries every placement (all of them for two, three or, since 0.1.40, four cards; proportional to the free VRAM beyond that)
+and scores each placement's stage work, including the expected cost of missed profile pairs. The default `prompt` objective
+uses the slowest stage because long prompt chunks are pipelined; `--layer-split-objective decode` instead adds all stage
+work for the legacy serial decode-window ranking. Ties go to the placement that leaves the fullest card the most room.
+The startup log prints the choice:
 
 ```
 strata generate: layer split auto: K=19 - the caches hold 11767 of 12288 profiled pairs (fullest device 100%)
