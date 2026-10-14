@@ -4323,11 +4323,12 @@ int main(int argc, char** argv) {
                                      "that many layers can start; keeping it\n", fmt(first).c_str(),
                              (long long) strata::program::split_rules::kMinStageLayers);
             } else {
+                const char* tiny_objective = decode_objective ? "decode window" : "prompt pipeline";
                 std::fprintf(stderr, "strata generate: layer split auto: K=%s would give a stage fewer than %lld layers "
                                      "(a tiny expert cache there clamps the prompt chunk of every card, #1616); chose "
-                                     "K=%s instead (%.1f ms per decode window, not %.1f)\n", fmt(first).c_str(),
+                                     "K=%s instead (%.1f ms per %s, not %.1f)\n", fmt(first).c_str(),
                              (long long) strata::program::split_rules::kMinStageLayers, fmt(best).c_str(), best_ms,
-                             first_ms);
+                             tiny_objective, first_ms);
             }
         }
         // ---- no startable placement: fall back to proportional, and if that too is impossible, say what is short
