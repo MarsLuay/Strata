@@ -11032,7 +11032,7 @@ int main(int argc, char** argv) {
                 if (!sample(-1)) return true;
                 for (const auto& st : stages)
                     if (!sample(st->dev)) return true;
-                if (strata::program::conv_cache::restore_has_headroom(free_bytes.data(), free_bytes.size(), floor))
+                if (strata::program::conv_cache::restore_has_headroom(true, free_bytes.data(), free_bytes.size(), floor))
                     return true;
                 uint64_t least = free_bytes.front();
                 for (const uint64_t bytes : free_bytes) least = std::min(least, bytes);
@@ -11041,7 +11041,7 @@ int main(int argc, char** argv) {
                              (long long) (least >> 20), (long long) o.vram_reserve_mib);
                 return false;
             };
-            if (incoming && !conversation_restore_has_headroom()) {
+            if (!stages.empty() && incoming && !conversation_restore_has_headroom()) {
                 auto retry = std::move(*incoming);
                 incoming.reset();
                 if (!conversations.put(std::move(retry)))
