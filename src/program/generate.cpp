@@ -12082,6 +12082,7 @@ int main(int argc, char** argv) {
                 if (!conversations.put(std::move(retry)))
                     std::fprintf(stderr, "strata serve: conversation cache: could not return skipped snapshot\n");
                 err.clear();
+            }
             if (borrow) {
                 const strata::core::SavedConversation* donor = conversations.find(parked.serial);
                 if (donor == nullptr ||
