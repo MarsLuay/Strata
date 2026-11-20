@@ -386,11 +386,11 @@ def process_tree_peak_mib(pid: int) -> float | None:
 
 
 class EngineHarness:
-    """Boot the engine once per candidate and measure the declared workload.
+    """Own one `--serve` process and measure one or more requests.
 
     The engine is a subprocess speaking line protocol over stdout, exactly as `serve/server.py`
-    drives it. One harness is created per candidate: a configuration that changes the expert cache
-    or the KV layout cannot be assumed to take effect in a running engine.
+    drives it. Startup arguments are fixed for the process lifetime, so settings that change the
+    expert cache or KV layout still require a fresh harness.
     """
 
     def __init__(self, engine: Path, args: dict[str, str], *, workload: dict[str, Any] | None = None,
@@ -593,20 +593,64 @@ class EngineHarness:
             self._proc = None
 
 
-def make_measure(engine: Path, workload: dict[str, Any] | None = None,
-                 cwd: Path | None = None) -> "callable":
-    """Build the `measure` callable the tuning job expects.
+class EngineMeasureSession:
+    """Reuse one engine process across measurements with identical launch arguments.
 
-    The returned function boots the engine with the candidate's args, measures once, and returns the
-    metrics. It raises on anything unusable, which the job records as that candidate's status.
+    The tuning job performs an unscored warm-up followed by repeated measurements for each candidate.
+    Keeping this session alive across those calls avoids reloading the engine for every repeat. A
+    launch-argument change closes the old process before starting the next one.
     """
-    def measure(candidate) -> dict[str, float]:
-        harness = EngineHarness(engine, candidate.args if hasattr(candidate, "args") else candidate,
-                                workload=workload, cwd=cwd)
+
+    def __init__(self, engine: Path, workload: dict[str, Any] | None = None,
+                 cwd: Path | None = None) -> None:
+        self.engine = Path(engine)
+        self.workload = workload
+        self.cwd = cwd
+        self._harness: EngineHarness | None = None
+        self._args_key: tuple[tuple[str, str], ...] | None = None
+
+    def __call__(self, candidate) -> dict[str, float]:
+        raw_args = candidate.args if hasattr(candidate, "args") else candidate
+        args = dict(raw_args)
+        args_key = tuple(sorted((str(flag), str(value)) for flag, value in args.items()))
+
+        if self._harness is None or self._args_key != args_key:
+            self.close()
+            harness = EngineHarness(self.engine, args, workload=self.workload, cwd=self.cwd)
+            try:
+                harness.start()
+            except BaseException:
+                harness.close()
+                raise
+            self._harness = harness
+            self._args_key = args_key
+
         try:
-            harness.start()
-            return harness.measure().to_metrics()
-        finally:
+            return self._harness.measure().to_metrics()
+        except BaseException:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        harness = self._harness
+        self._harness = None
+        self._args_key = None
+        if harness is not None:
             harness.close()
 
-    return measure
+    def __del__(self) -> None:
+        # Explicit owners call close(); this is a fallback for direct callers.
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
+def make_measure(engine: Path, workload: dict[str, Any] | None = None,
+                 cwd: Path | None = None) -> EngineMeasureSession:
+    """Build the reusable `measure` session expected by the tuning job.
+
+    Repeated calls with the same candidate arguments use one engine process. Call `close()` when the
+    owning job ends; the session also closes its child when the launch arguments change.
+    """
+    return EngineMeasureSession(engine, workload=workload, cwd=cwd)
