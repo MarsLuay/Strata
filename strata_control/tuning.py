@@ -483,7 +483,12 @@ class Tuner:
             self.save()
             return self.to_dict()
         finally:
-            self._release_lease()
+            try:
+                close_measure = getattr(self.measure, "close", None)
+                if callable(close_measure):
+                    close_measure()
+            finally:
+                self._release_lease()
 
     def _measure_candidate(self, candidate: Candidate) -> None:
         """Take the required repeats, and record why a candidate could not be measured."""
